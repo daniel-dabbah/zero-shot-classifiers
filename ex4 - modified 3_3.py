@@ -4,6 +4,7 @@
 # Exercise 4 - Natural Language Processing 67658  #
 ###################################################
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 # subset of categories that we will use
@@ -12,6 +13,7 @@ category_dict = {'comp.graphics': 'computer graphics',
                  'sci.electronics': 'science, electronics',
                  'talk.politics.guns': 'politics, guns'
                  }
+
 
 def get_data(categories=None, portion=1.):
     """
@@ -53,10 +55,17 @@ def linear_classification(portion=1.):
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import accuracy_score
     tf = TfidfVectorizer(stop_words='english', max_features=1000)
-    x_train, y_train, x_test, y_test = get_data(categories=category_dict.keys(), portion=portion)
+    x_train, y_train, x_test, y_test = get_data(
+        categories=category_dict.keys(), portion=portion)
 
-    # Add your code here
-    return
+    # convert the documents into a TF-IDF matrix:
+    x_train = tf.fit_transform(x_train)
+    x_test = tf.transform(x_test)
+
+    model = LogisticRegression()
+    model.fit(x_train, y_train)
+    y_pred = model.predict(x_test)
+    return accuracy_score(y_test, y_pred)
 
 
 # Q2
@@ -72,12 +81,14 @@ def transformer_classification(portion=1.):
         """
         Dataset object
         """
+
         def __init__(self, encodings, labels):
             self.encodings = encodings
             self.labels = labels
 
         def __getitem__(self, idx):
-            item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
+            item = {key: torch.tensor(val[idx])
+                    for key, val in self.encodings.items()}
             item['labels'] = torch.tensor(self.labels[idx])
             return item
 
@@ -86,6 +97,7 @@ def transformer_classification(portion=1.):
 
     from datasets import load_metric
     metric = load_metric("accuracy")
+
     def compute_metrics(eval_pred):
         logits, labels = eval_pred
         predictions = np.argmax(logits, axis=-1)
@@ -93,13 +105,16 @@ def transformer_classification(portion=1.):
 
     from transformers import Trainer, TrainingArguments
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained('distilroberta-base', cache_dir=None)
+    tokenizer = AutoTokenizer.from_pretrained(
+        'distilroberta-base', cache_dir=None)
     model = AutoModelForSequenceClassification.from_pretrained('distilroberta-base',
                                                                cache_dir=None,
-                                                               num_labels=len(category_dict),
+                                                               num_labels=len(
+                                                                   category_dict),
                                                                problem_type="single_label_classification")
 
-    x_train, y_train, x_test, y_test = get_data(categories=category_dict.keys(), portion=portion)
+    x_train, y_train, x_test, y_test = get_data(
+        categories=category_dict.keys(), portion=portion)
 
     # Add your code here
     # see https://huggingface.co/docs/transformers/v4.25.1/en/quicktour#trainer-a-pytorch-optimized-training-loop
@@ -117,8 +132,10 @@ def zeroshot_classification(portion=1.):
     from transformers import pipeline
     from sklearn.metrics import accuracy_score
     import torch
-    x_train, y_train, x_test, y_test = get_data(categories=category_dict.keys(), portion=portion)
-    clf = pipeline("zero-shot-classification", model='cross-encoder/nli-MiniLM2-L6-H768')
+    x_train, y_train, x_test, y_test = get_data(
+        categories=category_dict.keys(), portion=portion)
+    clf = pipeline("zero-shot-classification",
+                   model='cross-encoder/nli-MiniLM2-L6-H768')
     candidate_labels = list(category_dict.values())
 
     # Add your code here
@@ -126,20 +143,38 @@ def zeroshot_classification(portion=1.):
     return
 
 
+def plot_accs(portions, accs, model_name, ax=None):
+
+    if ax is None:
+        ax = plt.subplots()[1]
+
+    ax.plot(portions, accs, drawstyle='steps-post',  marker='o')
+
+    ax.set_xlabel('Portions')
+    ax.set_ylabel('Accuracy_score')
+    ax.set_title(f"{model_name} Results")
+
+
 if __name__ == "__main__":
     portions = [0.1, 0.5, 1.]
+
     # Q1
     print("Logistic regression results:")
+    accs = []
     for p in portions:
         print(f"Portion: {p}")
-        print(linear_classification(p))
+        res = linear_classification(p)
+        accs.append(res)
+        print(res)
 
-    # Q2
-    print("\nFinetuning results:")
-    for p in portions:
-        print(f"Portion: {p}")
-        print(transformer_classification(portion=p))
+    plot_accs(portions, accs, "Logistic regression")
 
-    # Q3
-    print("\nZero-shot result:")
-    print(zeroshot_classification())
+    # # Q2
+    # print("\nFinetuning results:")
+    # for p in portions:
+    #     print(f"Portion: {p}")
+    #     print(transformer_classification(portion=p))
+
+    # # Q3
+    # print("\nZero-shot result:")
+    # print(zeroshot_classification())
