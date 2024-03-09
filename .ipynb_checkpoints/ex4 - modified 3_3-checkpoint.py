@@ -175,7 +175,6 @@ if __name__ == "__main__":
     #     print(f"Portion: {p}")
     #     print(transformer_classification(portion=p))
 
-    # from here delete
     import torch
 
     class Dataset(torch.utils.data.Dataset):
@@ -240,13 +239,19 @@ if __name__ == "__main__":
         compute_metrics=compute_metrics)
 
     trainer.train()
+   #  import webbrowser
+   #  with open('path/iris-importance.htm', 'wb') as f:
+   #      f.write(a.data.encode("UTF-8"))
+
+   # # Open the stored HTML file on the default browser
+   #  url = r'path/iris-importance.htm'
+   #  webbrowser.open(url, new=2)
 
     k = trainer.evaluate()
     import pandas as pd
     df = pd.DataFrame([k])
     print(trainer.evaluate()['eval_accuracy'])
 
-    # end delete
     # # Q3
     # print("\nZero-shot result:")
     # print(zeroshot_classification())
