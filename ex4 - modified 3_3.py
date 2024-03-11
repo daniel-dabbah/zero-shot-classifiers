@@ -95,7 +95,7 @@ def transformer_classification(portion=1.):
             return len(self.labels)
 
     from datasets import load_metric
-    metric = load_metric("accuracy")
+    metric = load_metric("accuracy", trust_remote_code=True)
 
     def compute_metrics(eval_pred):
         logits, labels = eval_pred
@@ -105,12 +105,13 @@ def transformer_classification(portion=1.):
     from transformers import Trainer, TrainingArguments
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained(
-        'distilroberta-base', cache_dir=None)
+        'distilroberta-base', cache_dir=None, trust_remote_code=True)
     model = AutoModelForSequenceClassification.from_pretrained('distilroberta-base',
                                                                cache_dir=None,
                                                                num_labels=len(
                                                                    category_dict),
-                                                               problem_type="single_label_classification")
+                                                               problem_type="single_label_classification",
+                                                               trust_remote_code=True)
 
     x_train, y_train, x_test, y_test = get_data(
         categories=category_dict.keys(), portion=portion)
@@ -119,7 +120,30 @@ def transformer_classification(portion=1.):
     # see https://huggingface.co/docs/transformers/v4.25.1/en/quicktour#trainer-a-pytorch-optimized-training-loop
     # Use the DataSet object defined above. No need for a DataCollator
     from transformers import TrainingArguments
-    return
+
+    tokenized_train, tokenized_test = tokenizer(x_train, padding='longest', truncation=True), tokenizer(
+        x_test, padding='longest', truncation=True)
+    train_dataset, test_dataset = Dataset(
+        tokenized_train, y_train), Dataset(tokenized_test, y_test)
+
+    training_args = TrainingArguments(output_dir="distilroberta-base-results",
+                                      learning_rate=5e-5,
+                                      per_device_train_batch_size=16,
+                                      per_device_eval_batch_size=16,
+                                      num_train_epochs=3, logging_strategy="epoch", evaluation_strategy="epoch"
+                                      )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=test_dataset,
+        tokenizer=tokenizer,
+        compute_metrics=compute_metrics)
+
+    trainer.train()
+
+    return trainer.evaluate()['eval_accuracy']
 
 
 # Q3
@@ -170,81 +194,14 @@ if __name__ == "__main__":
     # plot_accs(portions, accs, "Logistic regression")
 
     # # Q2
-    # print("\nFinetuning results:")
-    # for p in portions:
-    #     print(f"Portion: {p}")
-    #     print(transformer_classification(portion=p))
-
-    # from here delete
-    import torch
-
-    class Dataset(torch.utils.data.Dataset):
-        """
-        Dataset object
-        """
-
-        def __init__(self, encodings, labels):
-            self.encodings = encodings
-            self.labels = labels
-
-        def __getitem__(self, idx):
-            item = {key: torch.tensor(val[idx])
-                    for key, val in self.encodings.items()}
-            item['labels'] = torch.tensor(self.labels[idx])
-            return item
-
-        def __len__(self):
-            return len(self.labels)
-
-    from datasets import load_metric
-    metric = load_metric("accuracy")
-    portion = 0.1
-
-    def compute_metrics(eval_pred):
-        logits, labels = eval_pred
-        predictions = np.argmax(logits, axis=-1)
-        return metric.compute(predictions=predictions, references=labels)
-
-    from transformers import Trainer, TrainingArguments
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(
-        'distilroberta-base', cache_dir=None)
-    model = AutoModelForSequenceClassification.from_pretrained('distilroberta-base',
-                                                               cache_dir=None,
-                                                               num_labels=len(
-                                                                   category_dict),
-                                                               problem_type="single_label_classification")
-
-    x_train, y_train, x_test, y_test = get_data(
-        categories=category_dict.keys(), portion=portion)
-
-    tokenized_train, tokenized_test = tokenizer(x_train, padding='longest', truncation=True), tokenizer(
-        x_test, padding='longest', truncation=True)
-    train_dataset, test_dataset = Dataset(
-        tokenized_train, y_train), Dataset(tokenized_test, y_test)
-
-    from transformers import TrainingArguments
-
-    training_args = TrainingArguments(output_dir="path/to/save/folder/",
-                                      learning_rate=5e-5,
-                                      per_device_train_batch_size=16,
-                                      per_device_eval_batch_size=16,
-                                      num_train_epochs=3
-                                      )
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=test_dataset,
-        tokenizer=tokenizer,
-        compute_metrics=compute_metrics)
-
-    trainer.train()
-
-    k = trainer.evaluate()
-    import pandas as pd
-    df = pd.DataFrame([k])
-    print(trainer.evaluate()['eval_accuracy'])
+    print("\nFinetuning results:")
+    accs = []
+    for p in portions:
+        print(f"Portion: {p}")
+        res = transformer_classification(p)
+        accs.append(res)
+        print(res)
+    plot_accs(portions, accs, "Finetuning results")
 
     # end delete
     # # Q3
