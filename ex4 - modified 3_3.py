@@ -183,17 +183,17 @@ if __name__ == "__main__":
     portions = [0.1, 0.5, 1.]
 
     # Q1
-    # print("Logistic regression results:")
-    # accs = []
-    # for p in portions:
-    #     print(f"Portion: {p}")
-    #     res = linear_classification(p)
-    #     accs.append(res)
-    #     print(res)
+    print("Logistic regression results:")
+    accs = []
+    for p in portions:
+        print(f"Portion: {p}")
+        res = linear_classification(p)
+        accs.append(res)
+        print(res)
 
-    # plot_accs(portions, accs, "Logistic regression")
+    plot_accs(portions, accs, "Logistic regression")
 
-    # # Q2
+    # Q2
     print("\nFinetuning results:")
     accs = []
     for p in portions:
