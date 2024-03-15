@@ -163,7 +163,7 @@ def zeroshot_classification(portion=1.):
     candidate_labels = list(category_dict.values())
 
     # Add your code here
-    # see https://huggingface.co/docs/transformers/v4.25.1/en/main_classes/pipelines#transformers.ZeroShotClassificationPipeline
+
     return
 
 
@@ -182,28 +182,40 @@ def plot_accs(portions, accs, model_name, ax=None):
 if __name__ == "__main__":
     portions = [0.1, 0.5, 1.]
 
-    # Q1
-    print("Logistic regression results:")
-    accs = []
-    for p in portions:
-        print(f"Portion: {p}")
-        res = linear_classification(p)
-        accs.append(res)
-        print(res)
+    # # Q1
+    # print("Logistic regression results:")
+    # accs = []
+    # for p in portions:
+    #     print(f"Portion: {p}")
+    #     res = linear_classification(p)
+    #     accs.append(res)
+    #     print(f"Accuracy: {res}")
 
-    plot_accs(portions, accs, "Logistic regression")
+    # plot_accs(portions, accs, "Logistic regression")
 
-    # Q2
-    print("\nFinetuning results:")
-    accs = []
-    for p in portions:
-        print(f"Portion: {p}")
-        res = transformer_classification(p)
-        accs.append(res)
-        print(res)
-    plot_accs(portions, accs, "Finetuning results")
+    # # Q2
+    # print("\nFinetuning results:")
+    # accs = []
+    # for p in portions:
+    #     print(f"Portion: {p}")
+    #     res = transformer_classification(p)
+    #     accs.append(res)
+    #     print(f"Accuracy: {res}")
 
-    # end delete
+    # plot_accs(portions, accs, "Finetuning results")
+
     # # Q3
     # print("\nZero-shot result:")
     # print(zeroshot_classification())
+
+    portion = .1
+    from transformers import pipeline
+    from sklearn.metrics import accuracy_score
+    import torch
+    x_train, y_train, x_test, y_test = get_data(
+        categories=category_dict.keys(), portion=portion)
+    clf = pipeline("zero-shot-classification",
+                   model='cross-encoder/nli-MiniLM2-L6-H768')
+    candidate_labels = list(category_dict.values())
+
+    results = clf(x_test, candidate_labels)
