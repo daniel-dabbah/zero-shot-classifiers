@@ -112,7 +112,6 @@ def transformer_classification(portion=1.):
                                                                    category_dict),
                                                                problem_type="single_label_classification",
                                                                trust_remote_code=True)
-
     x_train, y_train, x_test, y_test = get_data(
         categories=category_dict.keys(), portion=portion)
 
@@ -147,7 +146,7 @@ def transformer_classification(portion=1.):
 
 
 # Q3
-def zeroshot_classification(portion=1.):
+def zeroshot_classification(device, portion=1.):
     """
     Perform zero-shot classification
     :param portion: portion of the data to use
@@ -159,12 +158,16 @@ def zeroshot_classification(portion=1.):
     x_train, y_train, x_test, y_test = get_data(
         categories=category_dict.keys(), portion=portion)
     clf = pipeline("zero-shot-classification",
-                   model='cross-encoder/nli-MiniLM2-L6-H768')
+                   model='cross-encoder/nli-MiniLM2-L6-H768', device=device)
     candidate_labels = list(category_dict.values())
 
     # Add your code here
 
-    return
+    labels_map = {label: i for i, label in enumerate(candidate_labels)}
+    results = clf(x_test, candidate_labels)
+
+    preds = [labels_map[res['labels'][0]] for res in results]
+    return accuracy_score(y_test, preds)
 
 
 def plot_accs(portions, accs, model_name, ax=None):
@@ -182,40 +185,38 @@ def plot_accs(portions, accs, model_name, ax=None):
 if __name__ == "__main__":
     portions = [0.1, 0.5, 1.]
 
-    # # Q1
-    # print("Logistic regression results:")
-    # accs = []
-    # for p in portions:
-    #     print(f"Portion: {p}")
-    #     res = linear_classification(p)
-    #     accs.append(res)
-    #     print(f"Accuracy: {res}")
-
-    # plot_accs(portions, accs, "Logistic regression")
-
-    # # Q2
-    # print("\nFinetuning results:")
-    # accs = []
-    # for p in portions:
-    #     print(f"Portion: {p}")
-    #     res = transformer_classification(p)
-    #     accs.append(res)
-    #     print(f"Accuracy: {res}")
-
-    # plot_accs(portions, accs, "Finetuning results")
-
-    # # Q3
-    # print("\nZero-shot result:")
-    # print(zeroshot_classification())
-
-    portion = .1
-    from transformers import pipeline
-    from sklearn.metrics import accuracy_score
     import torch
-    x_train, y_train, x_test, y_test = get_data(
-        categories=category_dict.keys(), portion=portion)
-    clf = pipeline("zero-shot-classification",
-                   model='cross-encoder/nli-MiniLM2-L6-H768')
-    candidate_labels = list(category_dict.values())
 
-    results = clf(x_test, candidate_labels)
+    def get_available_device():
+        if torch.cuda.is_available():
+            return "cuda"
+        return "mps" if torch.backends.mps.is_available() else "cpu"
+
+    device_name = get_available_device()
+    pt_device = torch.device(device_name)
+
+    # Q1
+    print("Logistic regression results:")
+    accs = []
+    for p in portions:
+        print(f"Portion: {p}")
+        res = linear_classification(p)
+        accs.append(res)
+        print(f"Accuracy: {res}")
+
+    plot_accs(portions, accs, "Logistic regression")
+
+    # Q2
+    print("\nFinetuning results:")
+    accs = []
+    for p in portions:
+        print(f"Portion: {p}")
+        res = transformer_classification(pt_device, p)
+        accs.append(res)
+        print(f"Accuracy: {res}")
+
+    plot_accs(portions, accs, "Finetuning results")
+
+    # Q3
+    print("\nZero-shot result:")
+    print(zeroshot_classification(pt_device))
