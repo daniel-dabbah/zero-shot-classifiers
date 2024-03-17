@@ -1,8 +1,3 @@
-
-###################################################
-# Exercise 4 - Natural Language Processing 67658  #
-###################################################
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -211,7 +206,7 @@ if __name__ == "__main__":
     accs = []
     for p in portions:
         print(f"Portion: {p}")
-        res = transformer_classification(pt_device, p)
+        res = transformer_classification(p)
         accs.append(res)
         print(f"Accuracy: {res}")
 
